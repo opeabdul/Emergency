@@ -1,0 +1,21 @@
+<resources>
+    <string name="app_name">Emergency</string>
+    <string name="help">help</string>
+    <string name="location">location</string>
+    <string name="send">send verification code</string>
+    <string name="info">Make sure you can receive and send sms</string>
+    <string name="phone_number">Enter your mobile number</string>
+    <string name="verify_code">Verify Code</string>
+    <string name="enter_code">Enter verification code</string>
+    <string name="login">Login</string>
+    <string name="continue_string">Continue</string>
+    <string name="occupation">Occupation</string>
+    <string name="name_string">Name</string>
+    <string name="age">Age</string>
+
+    <string name="complete_profile_info">Please, fill the information form below correctly to allow us serve you better, your information is safe and secured with Dr. Cloud Emergency.</string>
+
+
+    <string name="hello_blank_fragment">Hello blank fragment</string>
+    <string name="logout">Logout</string>
+</resources>
