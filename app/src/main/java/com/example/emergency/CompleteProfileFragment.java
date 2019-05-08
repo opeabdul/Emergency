@@ -10,6 +10,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.TextView;
 
 import com.example.emergency.common.Common;
 import com.example.emergency.common.User;
@@ -48,6 +49,18 @@ public class CompleteProfileFragment extends Fragment {
         final EditText nameEditText = view.findViewById(R.id.name_editText);
         final EditText occupationEditText = view.findViewById(R.id.occupation_editText);
         final EditText ageEditText = view.findViewById(R.id.age_editText);
+
+        TextView skipTextView = view.findViewById(R.id.skip_TextView);
+        skipTextView.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                startActivity(
+                        new Intent(getContext(), MainActivity.class)
+                                .setFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK)
+                );
+            }
+        });
+
         Button sendInfoButton = view.findViewById(R.id.send_info_button);
 
         sendInfoButton.setOnClickListener(new View.OnClickListener() {

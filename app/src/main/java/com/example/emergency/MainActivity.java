@@ -14,13 +14,18 @@ import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.support.v7.widget.LinearLayoutManager;
+import android.support.v7.widget.RecyclerView;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import com.example.emergency.common.Common;
 import com.example.emergency.common.MyLocation;
+import com.example.emergency.common.Report;
+import com.example.emergency.common.ReportAdapter;
 import com.example.emergency.common.User;
 import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.Task;
@@ -38,6 +43,7 @@ import com.nightonke.boommenu.Types.PlaceType;
 import com.nightonke.boommenu.Util;
 
 import java.sql.Timestamp;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
 
@@ -49,18 +55,165 @@ public class MainActivity extends AppCompatActivity {
     private FirebaseUser mUser;
     private LocationManager mLocationManager;
 
-    DatabaseReference dbRef = FirebaseDatabase.getInstance().getReference("Reports");
+    private TextView mUserNameTextView;
+    private TextView mUserPhoneTextView;
+    private TextView mUserOccupationTextView;
+    private TextView mUserAddress;
+    private RecyclerView mReportRecyclerview;
+    ArrayList<Report> mEmergencyReports;
+    ReportAdapter mReportsAdapter;
+
+
+    DatabaseReference reportsdbRef = FirebaseDatabase.getInstance().getReference("Reports");
+    DatabaseReference usersdbRef = FirebaseDatabase.getInstance().getReference("Users");
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
+        initializeViews();
         userIsLoggedIn();
 
+        requestLocationPermission();
+        initializeUserLocation();
+        initializeUser();
+
+        initializeRecyclerView();
+        getReportData();
+
+    }
+
+    private void getReportData() {
+        reportsdbRef.child(mUser.getUid()).addValueEventListener(new ValueEventListener() {
+            @Override
+            public void onDataChange(@NonNull DataSnapshot dataSnapshot) {
+                if(dataSnapshot.exists()){
+
+                    for (DataSnapshot snapshot : dataSnapshot.getChildren()){
+
+                        String emergencyStatus= "";
+                        String emergencyType ="";
+                        String emergencyDate = "";
+
+                        if (snapshot.child("emergencyType").getValue() != null){
+                            emergencyType = snapshot.child("emergencyType").getValue().toString();
+                        }
+
+                        if (snapshot.child("timeStamp").getValue() != null){
+                            emergencyDate = snapshot.child("timeStamp").getValue().toString();
+                        }
+
+                        if (snapshot.child("status").getValue() != null){
+                            emergencyStatus = snapshot.child("status").getValue().toString();
+                        }
+
+                        Report report = new Report(emergencyType, emergencyStatus, emergencyDate);
+
+                        boolean reportExists = false;
+
+                        for(Report reportsIterator : mEmergencyReports){
+                            if( reportsIterator.getEmergencyTimeStamp().equals(report.getEmergencyTimeStamp())){
+                                reportExists = true;
+                            }
+                        }
+
+                        if (reportExists){
+                            continue;
+                        }
+
+                        mEmergencyReports.add(report);
+                        mReportsAdapter.notifyDataSetChanged();
+
+                    }
+                }
+            }
+
+            @Override
+            public void onCancelled(@NonNull DatabaseError databaseError) {
+
+            }
+        });
+
+    }
+
+    private void initializeRecyclerView() {
+        mEmergencyReports = new ArrayList<>();
+        LinearLayoutManager layoutManager = new LinearLayoutManager(this, LinearLayoutManager.VERTICAL, false);
+        mReportsAdapter = new ReportAdapter(mEmergencyReports, getApplicationContext());
+        mReportRecyclerview.setLayoutManager(layoutManager);
+        mReportRecyclerview.setHasFixedSize(true);
+        mReportRecyclerview.setAdapter(mReportsAdapter);
+
+    }
+
+    private void initializeViews() {
         mBoomMenuButton = findViewById(R.id.boom);
 
-        requestLocationPermission();
+        mUserNameTextView = findViewById(R.id.username_TextView);
+        mUserPhoneTextView = findViewById(R.id.user_phone_number_TextView);
+        mUserOccupationTextView = findViewById(R.id.user_occupation_TextView);
+        mUserAddress = findViewById(R.id.user_address_TextView);
+        mReportRecyclerview = findViewById(R.id.reports_RecyclerView);
+    }
+
+    private void userIsLoggedIn() {
+        mUser = FirebaseAuth.getInstance().getCurrentUser();
+        if (mUser == null) {
+            startActivity(
+                    new Intent(MainActivity.this, LoginActivity.class)
+                            .addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK)
+            );
+            finish();
+        }
+    }
+
+    private void initializeUser() {
+
+        DatabaseReference userDb = FirebaseDatabase.getInstance().getReference("Users").child(mUser.getUid());
+        userDb.addValueEventListener(new ValueEventListener() {
+            @Override
+            public void onDataChange(@NonNull DataSnapshot dataSnapshot) {
+
+                if (dataSnapshot.exists()) {
+
+                    User newUser = new User();
+
+                    if (dataSnapshot.child("occupation").getValue() != null) {
+                        String occupation = dataSnapshot.child("occupation").getValue().toString();
+                        newUser.setOccupation(occupation);
+                        mUserOccupationTextView.setText(occupation);
+                    }
+
+                    if (dataSnapshot.child("age").getValue() != null) {
+                        newUser.setAge(dataSnapshot.child("age").getValue().toString());
+                    }
+
+                    if (dataSnapshot.child("name").getValue() != null) {
+                        String name = dataSnapshot.child("name").getValue().toString();
+                        newUser.setName(name);
+                        mUserNameTextView.setText(name);
+                    }
+
+                    if (dataSnapshot.child("phoneNumber").getValue() != null) {
+                        String phoneNumber = dataSnapshot.child("phoneNumber").getValue().toString();
+                        newUser.setPhoneNumber(phoneNumber);
+                        mUserPhoneTextView.setText(phoneNumber);
+                    }
+
+                    Common.currentUser = newUser;
+
+                }
+            }
+
+            @Override
+            public void onCancelled(@NonNull DatabaseError databaseError) {
+
+            }
+        });
+    }
+
+    private void initializeUserLocation(){
         mLocationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
 
         LocationListener locationListener = new LocationListener() {
@@ -92,54 +245,7 @@ public class MainActivity extends AppCompatActivity {
 
         mLocationManager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, 0, 0, locationListener);
         mLocationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 0, 0, locationListener);
-
     }
-
-    private void userIsLoggedIn() {
-        mUser = FirebaseAuth.getInstance().getCurrentUser();
-        if (mUser == null) {
-            startActivity(
-                    new Intent(MainActivity.this, LoginActivity.class)
-                            .addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK)
-            );
-        }else{
-            DatabaseReference userDb = FirebaseDatabase.getInstance().getReference("users").child(mUser.getUid());
-            userDb.addValueEventListener(new ValueEventListener() {
-                @Override
-                public void onDataChange(@NonNull DataSnapshot dataSnapshot) {
-                    if(dataSnapshot.exists()){
-
-                        User  newUser = new User();
-
-                        if(dataSnapshot.child("occupation").getValue() != null){
-                            newUser.setOccupation(dataSnapshot.child("occupation").getValue().toString());
-                        }
-
-                        if(dataSnapshot.child("age").getValue() != null){
-                            newUser.setOccupation(dataSnapshot.child("age").getValue().toString());
-                        }
-
-                        if(dataSnapshot.child("name").getValue() != null){
-                            newUser.setOccupation(dataSnapshot.child("name").getValue().toString());
-                        }
-
-                        if(dataSnapshot.child("phoneNumber").getValue() != null){
-                            newUser.setOccupation(dataSnapshot.child("phoneNumber").getValue().toString());
-                        }
-
-                        Common.currentUser = newUser;
-
-                    }
-                }
-
-                @Override
-                public void onCancelled(@NonNull DatabaseError databaseError) {
-
-                }
-            });
-        }
-    }
-
     private void useLocation(Location location) {
         mLocation = location;
     }
@@ -218,34 +324,25 @@ public class MainActivity extends AppCompatActivity {
         }
         HashMap<String, Object> newEmergencyMap = new HashMap<>();
 
-        if (mLocation != null){
+        if (mLocation != null) {
             mLocation = mLocationManager.getLastKnownLocation(LocationManager.NETWORK_PROVIDER);
             MyLocation newLocation = new MyLocation(mLocation.getLatitude(), mLocation.getLongitude());
             newEmergencyMap.put("location", newLocation);
-        }
-        else {
+        } else {
             Toast.makeText(MainActivity.this, "Make sure your device location is switched on", Toast.LENGTH_LONG).show();
             return;
         }
 
-
-        User user;
-        if (Common.currentUser != null){
-            user = Common.currentUser;
-        }else{
-            user = new User(mUser.getDisplayName(), mUser.getPhoneNumber(), null, mUser.getPhotoUrl().toString(),null, null);
-        }
-
-        newEmergencyMap.put("user", user);
+        long timestamp = new Timestamp(new Date().getTime()).getTime();
         newEmergencyMap.put("emergencyType", emergencyType);
-        newEmergencyMap.put("timeStamp", new Timestamp(new Date().getTime()).getTime());
+        newEmergencyMap.put("timeStamp", timestamp);
+        newEmergencyMap.put("status", "pending");
 
 
-
-        dbRef.child(mUser.getUid()).setValue(newEmergencyMap).addOnCompleteListener(new OnCompleteListener<Void>() {
+        reportsdbRef.child(mUser.getUid()).push().setValue(newEmergencyMap).addOnCompleteListener(new OnCompleteListener<Void>() {
             @Override
             public void onComplete(@NonNull Task<Void> task) {
-                Toast.makeText(MainActivity.this, "New "+emergencyType + " emergency reported, immediate response on the way", Toast.LENGTH_LONG).show();
+                Toast.makeText(MainActivity.this, "New " + emergencyType + " emergency reported, immediate response on the way", Toast.LENGTH_LONG).show();
             }
         });
     }

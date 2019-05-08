@@ -59,6 +59,15 @@
             android:paddingVertical="15dp"
             android:inputType="number"/>
 
+        <TextView
+            android:id="@+id/skip_TextView"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="right"
+            android:textColor="@color/colorAccent"
+            android:text="Skip"
+            android:layout_margin="15dp"/>
+
         <Button
             android:id="@+id/send_info_button"
             android:layout_width="match_parent"

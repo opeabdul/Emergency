@@ -12,7 +12,7 @@
     <string name="occupation">Occupation</string>
     <string name="name_string">Name</string>
     <string name="age">Age</string>
-
+    <string name="emergencyTypeString">%1$s Emergency</string>
     <string name="complete_profile_info">Please, fill the information form below correctly to allow us serve you better, your information is safe and secured with Dr. Cloud Emergency.</string>
 
 
